@@ -1,0 +1,40 @@
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+
+
+# Dataset files - keep local, do not upload
+Multiple Drones.v1i.yolov11/
+Multiple Drones.v1i.yolov11.zip
+
+# Original pretrained model
+yolo11n.pt
+
+# Generated outputs - we will selectively add important results
+runs/
+
+# Trained model weights - handle separately if large
+weights/

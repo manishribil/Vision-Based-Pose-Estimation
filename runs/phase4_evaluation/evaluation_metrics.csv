@@ -1,0 +1,5 @@
+Metric,Score,Percentage
+precision,0.9963,99.63%
+recall,0.9951,99.51%
+mAP50,0.9936,99.36%
+mAP50-95,0.8512,85.12%

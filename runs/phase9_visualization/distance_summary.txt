@@ -1,0 +1,13 @@
+FORMATION DISTANCE SUMMARY
+==========================
+
+Images analysed: 84
+
+count    84.000000
+mean      0.438083
+std       0.158871
+min       0.053148
+25%       0.331755
+50%       0.390967
+75%       0.566462
+max       0.761180

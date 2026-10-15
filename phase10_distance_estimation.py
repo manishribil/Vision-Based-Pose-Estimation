@@ -3,11 +3,11 @@ Manasvi - distance estimation, relative-position visualization and error analysi
 built on top of Manish's detections (drone_positions.csv).
 
 Run from the repo root:
-    python3 src/formation_viz.py \
+    python3 phase10_distance_estimation.py \
         --positions runs/phase2_position/drone_positions.csv \
         --images "data/Multiple Drones.v1i.yolov11/test/images" \
         --labels "data/Multiple Drones.v1i.yolov11/test/labels" \
-        --out results/formation
+        --out results/distance
 
 Method
 ------

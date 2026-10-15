@@ -22,9 +22,9 @@ from ultralytics import YOLO
 
 WEIGHTS = "runs/detect/runs/drone/formation_v1/weights/best.pt"
 # ASSUMPTION TO VALIDATE: real width of the drone as seen by the box.
-# DJI Phantom 4 is ~0.35 m motor-to-motor diagonal; the box also includes
+# 3DR Solo is 0.46 m motor-to-motor diagonal; the box also includes
 # propellers, so the true visible width is a bit larger. Measure YOUR drone.
-REAL_WIDTH_M = 0.35
+REAL_WIDTH_M = 0.46
 TARGET_DISTANCE_M = 5.0     # desired formation distance
 TOLERANCE_M = 1.0           # +/- allowed
 CONF = 0.25

@@ -38,3 +38,5 @@ runs/
 
 # Trained model weights - handle separately if large
 weights/
+
+results/distance/frames/

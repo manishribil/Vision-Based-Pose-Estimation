@@ -118,14 +118,22 @@ The commands and paths above describe the intended workflow. Dataset configurati
 - `phase7_normalized_distance.py` — Normalized pairwise distances
 - `phase8_formation_statistics.py` — Formation statistics
 - `phase9_visualization.py` — Statistical charts
+- `phase10_distance_estimation.py` — Approximate distance from box width, formation status, error analysis
+- `tools/manasvi_distance_viz.py` — Calibration, image/video overlay and error analysis for a real camera
+- `tools/edge_case_tests.py` — Detector tests on blur, darkness, cropping and out-of-distribution images
+- `results/distance/` — Phase 10 outputs (metrics, plots, demo video)
 
 Evaluation metrics, formation CSVs, and selected Phase 9 outputs are included in the `runs` directory.
 
 ## Limitations
 
-The current implementation analyzes 2D image coordinates. Normalized distances are not physical distances in metres. Full 3D pose reconstruction and real-world distance estimation have not been implemented.
+Phases 1-9 analyse 2D image coordinates only; their normalized distances are not metres.
 
-Camera calibration, suitable geometric references, and validation data would be needed for further development toward physical 3D measurements.
+Phase 10 adds an approximate distance from box width, Z = f x W / w. It assumes a drone width of 0.46 m (3DR Solo) and an assumed 60 degree horizontal field of view, because the dataset video has no camera data. The metre values are therefore illustrative, not measured, and no physical distance measurements have been taken yet. The distance error reported in `results/distance/report_numbers.txt` covers box-width error only, not error in W, f or the pinhole model. Formation status uses spacing in drone-widths, which needs no calibration.
+
+This is not full 3D pose reconstruction. The detector is strong on images like the training video but unreliable outside it (see `tools/edge_case_tests.py`): a close-up white drone gives partial boxes, a street scene with no drone gives false detections, and heavy motion blur loses the drone. The test split comes from the same video as the training data, so test scores are optimistic.
+
+Camera calibration, a measured reference size and validation data would be needed for physical measurements.
 
 ## Dataset and Reproducibility
 
@@ -134,6 +142,33 @@ The dataset used for training and evaluation is not included in this repository.
 ## Future Work
 
 - Improve robustness on varied drone images and environments.
+- Run the physical distance test below to replace the assumed camera values.
+- Fine-tune on close-up and white drones and add negative images.
 - Investigate camera calibration and geometric reconstruction.
 - Explore 3D pose estimation with appropriate reference data.
 - Validate performance on independent datasets
+
+## Phase 10: Distance estimation and formation status (Manasvi D R)
+
+`phase10_distance_estimation.py` estimates approximate distance from box width (Z = f x W / w, with W = 0.46 m for the 3DR Solo and an assumed 60 degree field of view), measures nearest-neighbour spacing in drone-widths, assigns a formation status (maintained / too close / too far) and draws an overlay with a top-view map. It also measures the distance error caused by box-width error against the ground-truth labels. Spacing in drone-widths needs no calibration, unlike the image-size normalization in Phase 7. Metre values depend on the assumed camera.
+
+    python3 phase10_distance_estimation.py --positions runs/phase2_position/drone_positions.csv --images <test/images> --labels <test/labels> --out results/distance
+
+`tools/` has a calibration script for a real camera and edge-case tests of the detector on a close-up white drone and a street scene (it produces false detections and loses a blurred drone).
+
+### Physical distance test (to validate Phase 10)
+
+1. Photograph one object of known width (a drone or any box) at known distances, for example 1, 2, 3 and 5 m, with the same camera and zoom.
+2. Calibrate the focal length from the 2 m photo (use `--width-m` for the real width of the object in metres):
+
+        python3 tools/manasvi_distance_viz.py calibrate --image photo_2m.jpg --distance 2.0 --width-m 0.46
+
+3. Estimate the distance in each photo with the printed focal length:
+
+        python3 tools/manasvi_distance_viz.py run --source photo_3m.jpg --focal <value> --width-m 0.46
+
+4. Fill `tools/measurements_template.csv` (columns `true_m`, `estimated_m`) and run:
+
+        python3 tools/manasvi_distance_viz.py errors --csv tools/measurements_template.csv
+
+Note: the detector is trained on small dark drones against sky, so use an object it detects, or check the box before trusting the result.

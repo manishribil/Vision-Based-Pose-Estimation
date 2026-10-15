@@ -4,13 +4,13 @@ Manasvi's part: approximate distance + relative position + overlay + error analy
 Usage examples
 --------------
 # 1) Calibrate focal length (photo of the drone taken at a KNOWN distance)
-python manasvi_distance_viz.py calibrate --image near_2m.jpg --distance 2.0
+python3 tools/manasvi_distance_viz.py calibrate --image near_2m.jpg --distance 2.0
 
 # 2) Run on an image or video with the calibrated focal length
-python manasvi_distance_viz.py run --source drone_jpg.jpeg --focal 1450
+python3 tools/manasvi_distance_viz.py run --source drone_jpg.jpeg --focal 1450
 
 # 3) Error analysis from a CSV of (true_m, estimated_m) pairs
-python manasvi_distance_viz.py errors --csv measurements.csv
+python3 tools/manasvi_distance_viz.py errors --csv measurements.csv
 """
 import argparse
 import csv
@@ -191,10 +191,14 @@ if __name__ == "__main__":
     c = sub.add_parser("calibrate")
     c.add_argument("--image", required=True)
     c.add_argument("--distance", type=float, required=True)
+    c.add_argument("--width-m", type=float, default=None, help="real width of the object in metres (default: 0.46, 3DR Solo)")
     r = sub.add_parser("run")
     r.add_argument("--source", required=True)
     r.add_argument("--focal", type=float, required=True)
+    r.add_argument("--width-m", type=float, default=None, help="real width of the object in metres (default: 0.46, 3DR Solo)")
     e = sub.add_parser("errors")
     e.add_argument("--csv", required=True)
     a = p.parse_args()
+    if getattr(a, "width_m", None):
+        REAL_WIDTH_M = a.width_m
     {"calibrate": cmd_calibrate, "run": cmd_run, "errors": cmd_errors}[a.cmd](a)

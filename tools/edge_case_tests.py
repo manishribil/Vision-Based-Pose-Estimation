@@ -1,11 +1,10 @@
 """
 Manasvi - Step 2: detection quality and edge cases.
 
-Put this next to best.pt and your test images, then:
-    python edge_case_tests.py drone_jpg.jpeg [more_images ...]
+Run from the repo root:
+    python3 tools/edge_case_tests.py test_images/drone.jpg [more_images ...]
 
 For each image it runs best.pt on the original plus synthetic edge cases:
-  far_X     drone shrunk to X% of the frame (simulates larger distance)
   blur_K    motion blur of kernel size K
   dark_X    brightness scaled to X
   cut_*     drone partly outside the frame (crop)
@@ -22,15 +21,6 @@ from ultralytics import YOLO
 
 model = YOLO("runs/detect/runs/drone/formation_v1/weights/best.pt")
 os.makedirs("edge_cases", exist_ok=True)
-
-
-def far(img, pct):
-    h, w = img.shape[:2]
-    small = cv2.resize(img, (int(w * pct), int(h * pct)))
-    canvas = np.full_like(img, 128)
-    y0, x0 = (h - small.shape[0]) // 2, (w - small.shape[1]) // 2
-    canvas[y0:y0 + small.shape[0], x0:x0 + small.shape[1]] = small
-    return canvas
 
 
 def blur(img, k):
@@ -53,8 +43,6 @@ def cut(img, side):
 
 def variants(img):
     yield "original", img
-    for p in (0.5, 0.25, 0.12, 0.06):
-        yield f"far_{int(p * 100)}", far(img, p)
     for k in (15, 35):
         yield f"blur_{k}", blur(img, k)
     for f in (0.5, 0.2):

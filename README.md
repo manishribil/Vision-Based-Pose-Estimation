@@ -136,4 +136,4 @@ The dataset used for training and evaluation is not included in this repository.
 - Improve robustness on varied drone images and environments.
 - Investigate camera calibration and geometric reconstruction.
 - Explore 3D pose estimation with appropriate reference data.
-- Validate performance on independent datasets.
+- Validate performance on independent datasets

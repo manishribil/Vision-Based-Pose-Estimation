@@ -137,3 +137,11 @@ The dataset used for training and evaluation is not included in this repository.
 - Investigate camera calibration and geometric reconstruction.
 - Explore 3D pose estimation with appropriate reference data.
 - Validate performance on independent datasets
+
+## Phase 10: Distance estimation and formation status (Manasvi D R)
+
+`phase10_distance_estimation.py` estimates approximate distance from box width (Z = f x W / w, with W = 0.46 m for the 3DR Solo and an assumed 60 degree field of view), measures nearest-neighbour spacing in drone-widths, assigns a formation status (maintained / too close / too far) and draws an overlay with a top-view map. It also measures the distance error caused by box-width error against the ground-truth labels. Spacing in drone-widths needs no calibration, unlike the image-size normalization in Phase 7. Metre values depend on the assumed camera.
+
+    python3 phase10_distance_estimation.py --positions runs/phase2_position/drone_positions.csv --images <test/images> --labels <test/labels> --out results/distance
+
+`tools/` has a calibration script for a real camera and edge-case tests of the detector on a close-up white drone and a street scene (it produces false detections and loses a blurred drone).

@@ -49,7 +49,7 @@ for image_name, drones in detections_by_image.items():
 
     for drone in drones:
         drone["position_label"] = (
-            "Left" if drone["x"] < 0 else "Right"
+            "Left" if drone["x"] < 320 else "Right"
         )
 
     for i in range(len(drones)):

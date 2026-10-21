@@ -24,6 +24,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+outputs/
+outputs_error_analysis.png
 
 
 # Dataset files - keep local, do not upload

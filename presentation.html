@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision-Based Precision Pose Estimation for Autonomous Formation Flying</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #38bdf8;
+            --primary-dark: #0284c7;
+            --accent: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg-color); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .slides-container { flex: 1; position: relative; overflow: hidden; }
+        .slide { position: absolute; inset: 0; display: none; padding: 40px 60px; flex-direction: column; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+        .slide.active { display: flex; opacity: 1; }
+        .slide-header { margin-bottom: 24px; border-bottom: 2px solid var(--border); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .slide-title { font-size: 32px; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+        .slide-subtitle { font-size: 14px; color: var(--text-muted); }
+        .slide-content { flex: 1; display: grid; gap: 24px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); }
+        .card h3 { font-size: 18px; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        .card h3::before { content: ""; display: inline-block; width: 6px; height: 18px; background: var(--primary); border-radius: 2px; }
+        .card p, .card li { font-size: 14px; line-height: 1.6; color: var(--text-muted); margin-bottom: 8px; }
+        .card ul { list-style: none; }
+        .card li::before { content: "•"; color: var(--primary); font-weight: bold; display: inline-block; width: 1em; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-right: 6px; }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--accent); border: 1px solid var(--accent); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .badge-info { background: rgba(56, 189, 248, 0.2); color: var(--primary); border: 1px solid var(--primary); }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: rgba(15, 23, 42, 0.6); color: var(--primary); font-weight: 600; }
+        tr:hover { background: rgba(255, 255, 255, 0.03); }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+        .stat-card { background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+        .stat-value { font-size: 30px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+        .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .formula-box { background: rgba(15, 23, 42, 0.8); border-left: 4px solid var(--primary); padding: 14px; border-radius: 0 8px 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 14px; color: #38bdf8; margin: 10px 0; }
+        .img-container { width: 100%; height: 260px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #000; display: flex; align-items: center; justify-content: center; }
+        .img-container img { width: 100%; height: 100%; object-fit: contain; }
+
+        .footer { padding: 14px 60px; background: rgba(15, 23, 42, 0.9); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted); }
+        .controls button { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; margin-left: 8px; }
+        .controls button:hover { background: var(--primary-dark); border-color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="slides-container">
+
+    <!-- Slide 1: Title -->
+    <div class="slide active">
+        <div style="text-align: center; max-width: 900px; margin: 0 auto;">
+            <div style="display: inline-block; padding: 6px 16px; background: rgba(56, 189, 248, 0.15); border: 1px solid var(--primary); border-radius: 20px; color: var(--primary); font-size: 14px; font-weight: 600; margin-bottom: 20px;">
+                UE24CS352A • Machine Learning Mini-Project
+            </div>
+            <h1 style="font-size: 42px; font-weight: 800; line-height: 1.25; margin-bottom: 20px; background: linear-gradient(135deg, #f8fafc 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Vision-Based Precision Pose Estimation for Autonomous Formation Flying
+            </h1>
+            <p style="font-size: 18px; color: var(--text-muted); margin-bottom: 40px;">
+                Robust monocular 2D/3D inter-vehicle relative positioning and formation health tracking for GNSS-denied multi-UAV swarms.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px;">
+                <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 16px 28px; border-radius: 12px; text-align: left;">
+                    <div style="font-size: 12px; color: var(--text-muted);">Team Member 1</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #fff;">Manish Bala</div>
+                    <div style="font-size: 13px; color: var(--primary);">Object Detection & 2D Geometry</div>
+                </div>
+                <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 16px 28px; border-radius: 12px; text-align: left;">
+                    <div style="font-size: 12px; color: var(--text-muted);">Team Member 2</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #fff;">Manasvi D R</div>
+                    <div style="font-size: 13px; color: var(--accent);">3D Distance, Tracking & Error Analysis</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 2: Motivation & Problem -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">1. Problem Statement & Motivation</div>
+                <div class="slide-subtitle">Why vision-based relative positioning is indispensable for UAV formations</div>
+            </div>
+            <span class="badge badge-info">Overview</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>The Operational Challenge</h3>
+                <ul>
+                    <li><strong>GNSS Vulnerability:</strong> GPS jamming, spoofing, and multipath denial in urban, forest, or contested battlefields leave drones blind to their teammates.</li>
+                    <li><strong>RF Inter-Drone Communication Limits:</strong> Transmitting positions over WiFi/Radio causes latency, radio bandwidth congestion, and creates an electronic signal beacon.</li>
+                    <li><strong>Collision & Drift Hazards:</strong> Unregulated aerodynamic wake turbulence and GPS drift can lead to catastrophic mid-air collisions.</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Our Vision-Based Solution</h3>
+                <ul>
+                    <li><strong>100% Passive Sensing:</strong> Operates entirely on visual frames from a chase camera; emits zero detectable radio emissions.</li>
+                    <li><strong>Real-Time Spatial Telemetry:</strong> Extracts 2D centroids, relative bearings, and calculates 3D physical distances (Z, X, Y).</li>
+                    <li><strong>Dimensionless Health Engine:</strong> Measures nearest-neighbor spacing in normalized drone-widths, enabling zero-calibration formation maintenance.</li>
+                    <li><strong>Radar Visualization:</strong> Provides a real-time top-down bird's-eye radar map inset for situational awareness.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Dataset & Setup -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">2. Dataset & Target Drone Specifications</div>
+                <div class="slide-subtitle">Roboflow Multiple Drones Benchmark Analysis</div>
+            </div>
+            <span class="badge badge-info">Dataset Details</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>Dataset Characteristics</h3>
+                <ul>
+                    <li><strong>Resolution:</strong> 640 x 640 RGB test video frames.</li>
+                    <li><strong>Test Split:</strong> 96 sequential flight frames containing 277 labeled drone instances.</li>
+                    <li><strong>Target Drone:</strong> 3DR Solo commercial quadcopter with known diagonal motor-to-motor physical width <strong>W = 0.46 m</strong>.</li>
+                    <li><strong>Visual Variations:</strong> Fast maneuvering, high/low cloud contrast, overlapping drone occlusions, scale range from 8.4 px (far away) to 154.6 px (close).</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Native Frame Dimensions & Calibration</h3>
+                <p>Because the dataset video contains no optical sensor metadata, camera focal length is determined via standard field of view geometry:</p>
+                <div class="formula-box">
+                    f = (W_img / 2) / tan(HFOV / 2)<br>
+                    f = (640 / 2) / tan(30°) ≈ 554.26 px
+                </div>
+                <p>For custom cameras, our calibration tool (<code>tools/manasvi_distance_viz.py</code>) calculates true focal length from a single known distance measurement.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: System Architecture -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">3. System Architecture & 10-Phase Pipeline</div>
+                <div class="slide-subtitle">Modular bridge between deep neural detection and geometric computer vision</div>
+            </div>
+            <span class="badge badge-info">Methodology</span>
+        </div>
+        <div class="slide-content grid-3">
+            <div class="card">
+                <h3>Detection & Extraction</h3>
+                <p><strong>Phase 1:</strong> Pretrained model test</p>
+                <p><strong>Phase 2:</strong> Centroid extraction (cx, cy)</p>
+                <p><strong>Phase 3:</strong> Relative bearing analysis</p>
+                <p><strong>Phase 4:</strong> Test split evaluation</p>
+            </div>
+            <div class="card">
+                <h3>Formation Normalization</h3>
+                <p><strong>Phase 5:</strong> Visual overlay generation</p>
+                <p><strong>Phase 6:</strong> Coordinate normalization (0–1)</p>
+                <p><strong>Phase 7:</strong> Pairwise Euclidean distances</p>
+                <p><strong>Phase 8 & 9:</strong> Swarm statistics & charts</p>
+            </div>
+            <div class="card">
+                <h3>3D Pose & Health Engine</h3>
+                <p><strong>Phase 10:</strong> Pinhole depth (Z) & offsets (X, Y)</p>
+                <p><strong>Dimensionless Spacing:</strong> Drone-widths</p>
+                <p><strong>Top-Down Radar:</strong> Real-time X-Z inset</p>
+                <p><strong>Error Analysis:</strong> Sensitivity testing</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Mathematical Formulations -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">4. Core Mathematical Formulations</div>
+                <div class="slide-subtitle">Pinhole 3D reconstruction and formation health metrics</div>
+            </div>
+            <span class="badge badge-info">Mathematics</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>Pinhole Monocular 3D Reconstruction</h3>
+                <div class="formula-box">
+                    Z = (f · W) / w<br>
+                    X = (cx - c0) · Z / f<br>
+                    Y = (cy - c0) · Z / f
+                </div>
+                <p>Where:</p>
+                <ul>
+                    <li><code>W = 0.46 m</code>: Physical drone width</li>
+                    <li><code>w = x2 - x1</code>: Bounding box width in pixels</li>
+                    <li><code>f = 554 px</code>: Optical focal length</li>
+                    <li><code>c0 = 320 px</code>: Principal point (optical center)</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Calibration-Free Formation Spacing</h3>
+                <div class="formula-box">
+                    s = d_px / w_avg  (in drone-widths)<br>
+                    w_avg = (w_A + w_B) / 2
+                </div>
+                <p><strong>Formation Health Classification:</strong></p>
+                <div style="margin-top: 10px;">
+                    <div style="margin-bottom: 6px;"><span class="badge badge-success">MAINTAINED</span> 3.0 ≤ s ≤ 10.0 drone-widths</div>
+                    <div style="margin-bottom: 6px;"><span class="badge badge-danger">TOO CLOSE</span> s &lt; 3.0 drone-widths (Collision Alert)</div>
+                    <div><span class="badge badge-warning">TOO FAR</span> s &gt; 10.0 drone-widths (Formation Breakdown)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Model Evaluation Results -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">5. Quantitative Detection Performance</div>
+                <div class="slide-subtitle">YOLO11n model evaluation on 96 test frames</div>
+            </div>
+            <span class="badge badge-success">Results: 99%+</span>
+        </div>
+        <div class="slide-content">
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-value">99.63%</div>
+                    <div class="stat-label">Precision</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">99.51%</div>
+                    <div class="stat-label">Recall</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">99.36%</div>
+                    <div class="stat-label">mAP @ 50</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">85.12%</div>
+                    <div class="stat-label">mAP @ 50-95</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Test Set Performance Summary</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Evaluation Metric</th>
+                            <th>Score</th>
+                            <th>Percentage</th>
+                            <th>Analysis & Significance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Precision</strong></td>
+                            <td>0.9963</td>
+                            <td><span class="badge badge-success">99.63%</span></td>
+                            <td>Extremely low false-alarm rate; ignores background clouds and birds.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Recall</strong></td>
+                            <td>0.9951</td>
+                            <td><span class="badge badge-success">99.51%</span></td>
+                            <td>Detects virtually 100% of all formation drones across frames.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>mAP @ 50</strong></td>
+                            <td>0.9936</td>
+                            <td><span class="badge badge-success">99.36%</span></td>
+                            <td>Flawless localization at standard 0.5 IoU intersection threshold.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>mAP @ 50-95</strong></td>
+                            <td>0.8512</td>
+                            <td><span class="badge badge-success">85.12%</span></td>
+                            <td>High bounding box tightness even under harsh scale changes.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Depth Error & Sensitivity -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">6. Depth Error & Sensitivity Analysis</div>
+                <div class="slide-subtitle">Ground-Truth comparison across 272 matched bounding boxes</div>
+            </div>
+            <span class="badge badge-warning">Error Analysis</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>Ground-Truth Validation Metrics</h3>
+                <table>
+                    <tr><td><strong>Matched Boxes</strong></td><td>272 detections (IoU ≥ 0.5)</td></tr>
+                    <tr><td><strong>Mean IoU</strong></td><td>0.915</td></tr>
+                    <tr><td><strong>Mean Absolute Error (MAE)</strong></td><td><strong>0.252 m</strong></td></tr>
+                    <tr><td><strong>Root Mean Square Error (RMSE)</strong></td><td><strong>0.360 m</strong></td></tr>
+                    <tr><td><strong>Mean Percentage Error (MAPE)</strong></td><td><strong>2.5%</strong></td></tr>
+                    <tr><td><strong>90th Percentile Error</strong></td><td><strong>5.2%</strong></td></tr>
+                </table>
+            </div>
+            <div class="card">
+                <h3>Mathematical Sensitivity Derivation</h3>
+                <div class="formula-box">
+                    dZ / dw = - (f · W) / w² = - Z / w<br>
+                    | δZ / Z | = | δw / w |
+                </div>
+                <p><strong>Physical Finding:</strong> Fractional depth error is inversely proportional to detected box width.</p>
+                <ul>
+                    <li><strong>Near Drone (w = 120 px):</strong> 1 px jitter → <strong>0.83%</strong> depth error.</li>
+                    <li><strong>Far Drone (w = 10 px):</strong> 1 px jitter → <strong>10.0%</strong> depth error.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Edge Cases -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">7. Stress Testing & Edge Cases</div>
+                <div class="slide-subtitle">Empirical failure mode analysis using tools/edge_case_tests.py</div>
+            </div>
+            <span class="badge badge-danger">Stress Tests</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>Perturbation Results</h3>
+                <table>
+                    <thead>
+                        <tr><th>Test Case</th><th>Condition</th><th>Conf</th><th>Result</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Motion Blur</td><td>Kernel K=15</td><td>0.11</td><td>Weak detection</td></tr>
+                        <tr><td>Motion Blur</td><td>Kernel K=35</td><td>0.00</td><td><span class="badge badge-danger">Dropout (0 boxes)</span></td></tr>
+                        <tr><td>Darkness</td><td>50% Intensity</td><td>0.33</td><td><span class="badge badge-success">Robust</span></td></tr>
+                        <tr><td>Darkness</td><td>20% Intensity</td><td>0.37</td><td><span class="badge badge-success">Robust</span></td></tr>
+                        <tr><td>Cropping</td><td>35% Left Cut</td><td>0.31</td><td>Distorted width (Z inflated)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h3>Key Failure Modes Identified</h3>
+                <ul>
+                    <li><strong>Out-of-Distribution Urban Clutter (bus.jpg):</strong> Tested against a busy Madrid street scene with no drones. The detector fired a false positive (conf = 0.47) on window contours.</li>
+                    <li><strong>Morphological Bias (drone.jpg):</strong> A white commercial drone in close-up triggered fragmented boxes because the model was trained on dark 3DR Solo frames against open sky.</li>
+                    <li><strong>Motion Blur Vulnerability:</strong> High angular rates without high shutter speed cause detection loss.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 9: Live Demo Walkthrough -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">8. Live Demonstration & Verification</div>
+                <div class="slide-subtitle">Interactive tools and verification suite</div>
+            </div>
+            <span class="badge badge-info">Demonstration</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>End-to-End Verification (verify_pipeline.py)</h3>
+                <p>Automated verification script confirms data integrity and executes every pipeline component:</p>
+                <div class="formula-box">
+                    python verify_pipeline.py<br>
+                    -> ALL PHASES PASSED (10/10) in 1.38s
+                </div>
+                <p>Verifies Phase 1 through Phase 10, generating all statistical figures, CSVs, and video demos.</p>
+            </div>
+            <div class="card">
+                <h3>Live Demonstration Script (demo.py)</h3>
+                <p>Ready for viva demonstration on webcam, video, or image:</p>
+                <div class="formula-box">
+                    python demo.py --source test_images/drone.jpg<br>
+                    python demo.py --source 0  (Live Webcam)
+                </div>
+                <ul>
+                    <li>Real-time HUD telemetry overlay.</li>
+                    <li>Inter-drone formation distance links.</li>
+                    <li>Bird's-eye top-down radar map projection.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 10: Contributions & Conclusion -->
+    <div class="slide">
+        <div class="slide-header">
+            <div>
+                <div class="slide-title">9. Conclusions & Individual Contributions</div>
+                <div class="slide-subtitle">Summary of deliverables and team member breakdown</div>
+            </div>
+            <span class="badge badge-success">Final Slide</span>
+        </div>
+        <div class="slide-content grid-2">
+            <div class="card">
+                <h3>Manish Bala</h3>
+                <ul>
+                    <li>YOLO11n model selection and fine-tuning.</li>
+                    <li>2D bounding box and centroid extraction (Phases 1, 2).</li>
+                    <li>Relative spatial bearing engine (Phase 3).</li>
+                    <li>Model test split evaluation (Phase 4).</li>
+                    <li>Resolution-invariant coordinate normalization (Phase 6).</li>
+                    <li>Pairwise distance calculations (Phase 7).</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Manasvi D R</h3>
+                <ul>
+                    <li>Pinhole 3D monocular distance estimation (Phase 10).</li>
+                    <li>Dimensionless nearest-neighbor drone-width formulation.</li>
+                    <li>Dynamic formation health classifier & top-down radar.</li>
+                    <li>Mathematical error sensitivity (|δZ/Z| = |δw/w|).</li>
+                    <li>Automated edge-case stress test suite (<code>tools/edge_case_tests.py</code>).</li>
+                    <li>Physical focal calibration tool (<code>tools/manasvi_distance_viz.py</code>).</li>
+                    <li>Master pipeline verification (<code>verify_pipeline.py</code>) & write-up PDF.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    <div>Slide <span id="current-slide">1</span> of <span id="total-slides">10</span> • UE24CS352A Machine Learning Mini-Project</div>
+    <div class="controls">
+        <button onclick="prevSlide()">❮ Prev</button>
+        <button onclick="nextSlide()">Next ❯</button>
+    </div>
+</div>
+
+<script>
+    let current = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalEl = document.getElementById('total-slides');
+    const currentEl = document.getElementById('current-slide');
+    totalEl.innerText = slides.length;
+
+    function showSlide(index) {
+        slides[current].classList.remove('active');
+        current = (index + slides.length) % slides.length;
+        slides[current].classList.add('active');
+        currentEl.innerText = current + 1;
+    }
+
+    function nextSlide() { showSlide(current + 1); }
+    function prevSlide() { showSlide(current - 1); }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+        if (e.key === 'ArrowLeft') prevSlide();
+    });
+</script>
+
+</body>
+</html>

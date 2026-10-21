@@ -1,11 +1,28 @@
 
+import argparse
 from pathlib import Path
 import csv
 import cv2
+import torch
 from ultralytics import YOLO
 
 # 1. Project paths
 PROJECT_DIR = Path(__file__).resolve().parent
+
+parser = argparse.ArgumentParser(description="Phase 2: Extract 2D drone positions")
+parser.add_argument(
+    "--images",
+    type=str,
+    default=None,
+    help="Path to directory containing input images"
+)
+parser.add_argument(
+    "--conf",
+    type=float,
+    default=0.25,
+    help="Confidence threshold for detection"
+)
+args = parser.parse_args()
 
 MODEL_PATH = (
     PROJECT_DIR
@@ -18,12 +35,15 @@ MODEL_PATH = (
     / "best.pt"
 )
 
-TEST_DIR = (
-    PROJECT_DIR
-    / "Multiple Drones.v1i.yolov11"
-    / "test"
-    / "images"
-)
+# Check user-specified or standard dataset paths
+if args.images:
+    TEST_DIR = Path(args.images)
+else:
+    dataset_dir = PROJECT_DIR / "Multiple Drones.v1i.yolov11" / "test" / "images"
+    if dataset_dir.exists():
+        TEST_DIR = dataset_dir
+    else:
+        TEST_DIR = PROJECT_DIR / "test_images"
 
 OUTPUT_DIR = PROJECT_DIR / "runs" / "phase2_position"
 IMAGE_OUTPUT_DIR = OUTPUT_DIR / "images"
@@ -37,10 +57,21 @@ if not MODEL_PATH.exists():
 
 if not TEST_DIR.exists():
     raise FileNotFoundError(
-        f"Test images folder not found: {TEST_DIR}"
+        f"Images folder not found: {TEST_DIR}"
     )
 
 IMAGE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# Select appropriate acceleration device
+if torch.cuda.is_available():
+    device = 0
+elif torch.backends.mps.is_available():
+    device = "mps"
+else:
+    device = "cpu"
+
+print(f"Using device: {device}")
+print(f"Input directory: {TEST_DIR}")
 
 # 3. Load your trained YOLO model
 model = YOLO(str(MODEL_PATH))
@@ -62,8 +93,8 @@ for image_path in sorted(image_files):
     results = model.predict(
         source=str(image_path),
         imgsz=640,
-        conf=0.25,
-        device=0,
+        conf=args.conf,
+        device=device,
         verbose=False
     )
 
@@ -132,20 +163,27 @@ for image_path in sorted(image_files):
         "drones detected"
     )
 
-# 5. Save all coordinates in a CSV file
+# 5. Save coordinates in CSV
 fieldnames = [
     "image", "drone_id", "confidence",
     "x1", "y1", "x2", "y2",
     "center_x", "center_y"
 ]
 
-with CSV_PATH.open("w", newline="", encoding="utf-8") as file:
+# If running on fallback test_images and full dataset CSV already exists, preserve full dataset CSV
+target_csv = CSV_PATH
+if TEST_DIR == (PROJECT_DIR / "test_images") and CSV_PATH.exists():
+    target_csv = OUTPUT_DIR / "drone_positions_sample.csv"
+    print(f"\n[Note] Preserving existing full-dataset {CSV_PATH.name} (96 images).")
+    print(f"Sample test detections saved to: {target_csv.name}")
+
+with target_csv.open("w", newline="", encoding="utf-8") as file:
     writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(csv_rows)
 
 print("\nPhase 2 completed!")
 print(f"Annotated images: {IMAGE_OUTPUT_DIR}")
-print(f"Position data: {CSV_PATH}")
+print(f"Position data: {target_csv}")
 print(f"Total images processed: {len(image_files)}")
 print(f"Total drone detections: {len(csv_rows)}")

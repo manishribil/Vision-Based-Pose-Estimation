@@ -203,10 +203,10 @@ def error_analysis(df, label_dir, f, W, out):
 # --------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--positions", required=True)
-    ap.add_argument("--images", required=True)
+    ap.add_argument("--positions", default="runs/phase2_position/drone_positions.csv")
+    ap.add_argument("--images", default="Multiple Drones.v1i.yolov11/test/images")
     ap.add_argument("--labels", default=None)
-    ap.add_argument("--out", default="results/formation")
+    ap.add_argument("--out", default="results/distance")
     ap.add_argument("--width-m", type=float, default=0.46, help="real drone width W (3DR Solo motor-to-motor = 0.46 m)")
     ap.add_argument("--hfov", type=float, default=60.0, help="ASSUMED horizontal field of view (deg)")
     ap.add_argument("--min-sep", type=float, default=3.0, help="too-close threshold (drone-widths)")
@@ -222,14 +222,25 @@ def main():
 
     statuses, written = [], []
     for img_name, g in df.groupby("image", sort=False):
-        img = cv2.imread(os.path.join(a.images, img_name))
+        img_path = os.path.join(a.images, img_name) if a.images else None
+        img = cv2.imread(img_path) if (img_path and os.path.exists(img_path)) else None
+        
+        existing_frame_path = os.path.join(a.out, "frames", f"{frame_no(img_name):05d}.jpg")
+        if img is None and os.path.exists(existing_frame_path):
+            img = cv2.imread(existing_frame_path)
+            # Resize back to base if it was previously upscaled
+            if img is not None and img.shape[0] != IMG:
+                img = cv2.resize(img, (IMG, IMG))
+
         if img is None:
-            continue
+            img = np.full((IMG, IMG, 3), 30, dtype=np.uint8)
+
         out = draw_frame(img, g, a.min_sep, a.max_sep)
         p = os.path.join(a.out, "frames", f"{frame_no(img_name):05d}.jpg")
         cv2.imwrite(p, out)
         written.append(p)
         statuses.append((frame_no(img_name), frame_status(g, a.min_sep, a.max_sep)[0], len(g)))
+
     if written:
         h, w = cv2.imread(written[0]).shape[:2]
         vw = cv2.VideoWriter(os.path.join(a.out, "formation_demo.mp4"),

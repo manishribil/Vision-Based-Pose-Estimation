@@ -6,7 +6,3 @@ Nearest-neighbour spacing (drone-widths): median 5.9, IQR 4.1-9.4
 Nearest-neighbour spacing (m, 3D): median 4.44
 Frame status counts: maintained=44, outside threshold (too far)=34, single drone=12, too close=6
 Within-frame width ratio (max/min), multi-drone frames: median 1.56
-
-Distance error caused by box-width error (detected box vs ground-truth box):
-  matched boxes n=272, mean IoU=0.915, median GT width=29.0px
-  MAE = 0.252 m, RMSE = 0.360 m, mean |error| = 2.5%, 90th pct = 5.2%

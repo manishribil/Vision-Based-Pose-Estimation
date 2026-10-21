@@ -1,0 +1,17 @@
+image,case,detected,num_boxes,best_conf,box_width_px
+drone,original,1,3,0.39,293
+drone,blur_15,1,1,0.11,294
+drone,blur_35,0,0,0.00,0
+drone,dark_50,1,4,0.33,310
+drone,dark_20,1,2,0.37,322
+drone,cut_left,1,2,0.31,135
+drone,cut_right,1,4,0.37,137
+drone,cut_top,1,4,0.34,324
+bus,original,1,23,0.47,216
+bus,blur_15,0,0,0.00,0
+bus,blur_35,0,0,0.00,0
+bus,dark_50,1,13,0.36,273
+bus,dark_20,1,6,0.24,345
+bus,cut_left,1,11,0.50,224
+bus,cut_right,1,14,0.48,222
+bus,cut_top,1,17,0.36,176

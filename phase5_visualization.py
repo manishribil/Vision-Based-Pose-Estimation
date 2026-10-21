@@ -6,18 +6,39 @@ from collections import defaultdict
 
 import cv2
 
+import argparse
+import csv
+import math
+from pathlib import Path
+from collections import defaultdict
+
+import cv2
+import numpy as np
+
 # --------------------------------------------------
-# 1. PROJECT PATHS
+# 1. PROJECT PATHS & ARGUMENTS
 # --------------------------------------------------
 
 PROJECT = Path(__file__).resolve().parent
 
+parser = argparse.ArgumentParser(description="Phase 5: Drone Detection and Formation Visualization")
+parser.add_argument("--images", type=str, default=None, help="Path to input images directory")
+parser.add_argument("--limit", type=int, default=15, help="Number of visualizations to generate (-1 for all)")
+args = parser.parse_args()
+
 CSV_PATH = PROJECT / "runs" / "phase2_position" / "drone_positions.csv"
-IMAGE_DIR = PROJECT / "Multiple Drones.v1i.yolov11" / "test" / "images"
+
+if args.images:
+    IMAGE_DIR = Path(args.images)
+else:
+    dataset_dir = PROJECT / "Multiple Drones.v1i.yolov11" / "test" / "images"
+    if dataset_dir.exists():
+        IMAGE_DIR = dataset_dir
+    else:
+        IMAGE_DIR = PROJECT / "test_images"
+
 OUTPUT_DIR = PROJECT / "runs" / "phase5_visualization"
-
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
 
 # --------------------------------------------------
 # 2. CHECK INPUTS
@@ -25,10 +46,6 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 if not CSV_PATH.exists():
     raise FileNotFoundError(f"CSV not found: {CSV_PATH}")
-
-if not IMAGE_DIR.exists():
-    raise FileNotFoundError(f"Image folder not found: {IMAGE_DIR}")
-
 
 # --------------------------------------------------
 # 3. READ CSV AND GROUP BY IMAGE
@@ -51,20 +68,33 @@ processed = 0
 missing = 0
 
 for image_name, drones in detections_by_image.items():
+    if args.limit != -1 and processed >= args.limit:
+        break
 
     image_path = IMAGE_DIR / image_name
 
-    if not image_path.exists():
-        print(f"Image not found: {image_name}")
-        missing += 1
-        continue
-
-    image = cv2.imread(str(image_path))
+    if image_path.exists():
+        image = cv2.imread(str(image_path))
+    else:
+        image = None
 
     if image is None:
-        print(f"Could not read: {image_name}")
-        missing += 1
-        continue
+        # Create a synthetic 640x640 arena canvas if raw frame is not on disk
+        image = np.full((640, 640, 3), 30, dtype=np.uint8)
+        # Draw light grid lines
+        for g in range(80, 640, 80):
+            cv2.line(image, (g, 0), (g, 640), (45, 45, 45), 1)
+            cv2.line(image, (0, g), (640, g), (45, 45, 45), 1)
+        cv2.putText(
+            image,
+            f"Formation Arena: {image_name[:32]}",
+            (15, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (180, 180, 180),
+            1
+        )
+
 
     centres = []
 
